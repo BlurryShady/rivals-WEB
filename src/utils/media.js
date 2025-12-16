@@ -1,21 +1,22 @@
-import { API_ROOT } from "../api/client";
+import { API_ROOT } from '../api/client';
 
-export const buildMediaUrl = (value) => {
-  if (!value) return null;
+const normalizeCloudinaryUrl = (url) => {
+  // converts .../upload/v123/... -> .../upload/...
+  if (!url.includes('res.cloudinary.com')) return url;
+  return url.replace(/\/image\/upload\/v\d+\//, '/image/upload/');
+};
 
-  // Already absolute (Cloudinary / external)
-  if (typeof value === "string" && value.startsWith("http")) return value;
+export const buildMediaUrl = (path) => {
+  if (!path) return null;
 
-  // Relative backend media (local/dev)
-  return `${API_ROOT}${value}`;
+  if (path.startsWith('http')) {
+    return normalizeCloudinaryUrl(path);
+  }
+
+  return `${API_ROOT}${path}`;
 };
 
 export const resolveHeroArtwork = (hero) => {
   if (!hero) return null;
-
-  // NEW fields from your API
-  const banner = hero.banner_url ?? hero.banner;
-  const image = hero.image_url ?? hero.image;
-
-  return buildMediaUrl(banner) || buildMediaUrl(image);
+  return buildMediaUrl(hero.banner) || buildMediaUrl(hero.image);
 };

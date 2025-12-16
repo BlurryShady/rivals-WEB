@@ -12,10 +12,6 @@ function TeamBuilderPage() {
   const [showModal, setShowModal] = useState(false);
 
   useEffect(() => {
-    console.log('Modal state changed to:', showModal);
-  }, [showModal]);
-
-  useEffect(() => {
     async function fetchHeroes() {
       try {
         const response = await heroAPI.getAll();
@@ -51,9 +47,7 @@ function TeamBuilderPage() {
         })),
       };
 
-      console.log('Sending to API:', payload);
       const response = await teamAPI.create(payload);
-
       alert(`✅ Team "${teamData.name}" saved successfully!`);
       console.log('Saved team:', response.data);
 
@@ -70,9 +64,7 @@ function TeamBuilderPage() {
       <div className="mb-10">
         <h1
           className="text-5xl font-bold gold-text-shiny font-display mb-3"
-          style={{
-            textShadow: '0 0 40px rgba(212, 175, 55, 0.7), 0 4px 20px rgba(0, 0, 0, 0.8)',
-          }}
+          style={{ textShadow: '0 0 40px rgba(212, 175, 55, 0.7), 0 4px 20px rgba(0, 0, 0, 0.8)' }}
         >
           Team Builder
         </h1>
@@ -113,8 +105,6 @@ function TeamBuilderPage() {
             <div className="space-y-6">
               {filteredHeroes.map((hero) => {
                 const isSelected = selectedHeroes.some((h) => h.id === hero.id);
-
-                // ✅ Always normalize to a usable URL (handles relative paths)
                 const imageSrc = buildMediaUrl(hero.image_url ?? hero.image ?? hero.banner);
 
                 return (
@@ -131,25 +121,23 @@ function TeamBuilderPage() {
                     `}
                   >
                     <div className="flex gap-5 p-5">
-                      <div className="w-28 h-28 flex-shrink-0 rounded-xl overflow-hidden bg-gradient-to-br from-[#1A1612] to-[#252119] border-2 border-[#D4AF37]/20 flex items-center justify-center">
+                      <div className="w-28 h-28 flex-shrink-0 rounded-xl overflow-hidden bg-gradient-to-br from-[#1A1612] to-[#252119] border-2 border-[#D4AF37]/20 relative">
+                        {/* fallback behind */}
+                        <div className="absolute inset-0 flex items-center justify-center text-5xl">
+                          🦸
+                        </div>
+
                         {imageSrc ? (
                           <img
                             src={imageSrc}
                             alt={hero.name}
-                            className="w-full h-full object-contain"
+                            className="relative z-10 w-full h-full object-contain"
                             loading="lazy"
                             onError={(e) => {
-                              // If a single image breaks, show placeholder
-                              e.currentTarget.onerror = null;
-                              e.currentTarget.src = '';
                               e.currentTarget.style.display = 'none';
                             }}
                           />
                         ) : null}
-
-                        {!imageSrc && (
-                          <div className="w-full h-full flex items-center justify-center text-5xl">🦸</div>
-                        )}
                       </div>
 
                       <div className="flex-1 min-w-0">
@@ -186,14 +174,12 @@ function TeamBuilderPage() {
                                   />
                                 ))}
                               </div>
-                              <span className="text-sm font-bold text-[#D4AF37]">
-                                ({hero.difficulty}/3)
-                              </span>
+                              <span className="text-sm font-bold text-[#D4AF37]">({hero.difficulty}/3)</span>
                             </div>
                           </div>
                         )}
 
-                        {hero.playstyle_tags && hero.playstyle_tags.length > 0 && (
+                        {hero.playstyle_tags?.length > 0 && (
                           <div className="flex flex-wrap gap-2 mb-4">
                             {hero.playstyle_tags.map((tag, idx) => (
                               <span
@@ -212,7 +198,7 @@ function TeamBuilderPage() {
                           </p>
                         )}
 
-                        {hero.counters && hero.counters.length > 0 && (
+                        {hero.counters?.length > 0 && (
                           <div className="mb-4">
                             <p className="category-label mb-2 flex items-center gap-2">
                               <span></span>
@@ -228,7 +214,7 @@ function TeamBuilderPage() {
                           </div>
                         )}
 
-                        {hero.synergies && hero.synergies.length > 0 && (
+                        {hero.synergies?.length > 0 && (
                           <div className="mb-2">
                             <p className="category-label mb-2 flex items-center gap-2">
                               <span></span>
@@ -252,21 +238,13 @@ function TeamBuilderPage() {
           )}
         </div>
 
-        <aside
-          className="w-[420px] flex-shrink-0"
-          style={{ position: 'sticky', top: '1.5rem', alignSelf: 'flex-start' }}
-        >
-          <div
-            className="glass p-8 rounded-3xl border-2 border-[#D4AF37]/20"
-            style={{ maxHeight: 'calc(100vh - 3rem)', overflowY: 'auto' }}
-          >
+        <aside className="w-[420px] flex-shrink-0" style={{ position: 'sticky', top: '1.5rem', alignSelf: 'flex-start' }}>
+          <div className="glass p-8 rounded-3xl border-2 border-[#D4AF37]/20" style={{ maxHeight: 'calc(100vh - 3rem)', overflowY: 'auto' }}>
             <h2 className="text-3xl font-bold gold-text mb-6 font-display">Your Team</h2>
 
             <div className="space-y-3 mb-8">
               {[...Array(6)].map((_, index) => {
                 const hero = selectedHeroes[index];
-
-                // ✅ Normalize image url for sidebar too
                 const slotImg = hero ? buildMediaUrl(hero.image_url ?? hero.image ?? hero.banner) : null;
 
                 return (
@@ -296,27 +274,28 @@ function TeamBuilderPage() {
 
                     {hero ? (
                       <>
-                        <div className="w-14 h-14 rounded-lg bg-[#252119] flex-shrink-0 overflow-hidden border-2 border-[#D4AF37]/30 flex items-center justify-center">
+                        <div className="w-14 h-14 rounded-lg bg-[#252119] flex-shrink-0 overflow-hidden border-2 border-[#D4AF37]/30 relative">
+                          <div className="absolute inset-0 flex items-center justify-center text-2xl">
+                            🦸
+                          </div>
                           {slotImg ? (
                             <img
                               src={slotImg}
                               alt={hero.name}
-                              className="w-full h-full object-cover"
+                              className="relative z-10 w-full h-full object-cover"
                               loading="lazy"
                               onError={(e) => {
-                                e.currentTarget.onerror = null;
-                                e.currentTarget.src = '';
                                 e.currentTarget.style.display = 'none';
                               }}
                             />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center text-2xl">🦸</div>
-                          )}
+                          ) : null}
                         </div>
+
                         <div className="flex-1 min-w-0">
                           <p className="font-bold text-base text-[#F5F3F0] truncate">{hero.name}</p>
                           <p className="text-xs text-[#D4AF37] font-semibold">{hero.role}</p>
                         </div>
+
                         <button
                           onClick={() => handleSelectHero(hero)}
                           className="w-8 h-8 rounded-full bg-[#252119] text-[#9B8B7E] hover:bg-[#8B7355]/30 hover:text-[#D4AF37] transition-all flex items-center justify-center font-bold border border-[#D4AF37]/20"
@@ -336,10 +315,7 @@ function TeamBuilderPage() {
 
             <div className="space-y-4 mb-8">
               <button
-                onClick={() => {
-                  console.log('Save Team clicked, current heroes:', selectedHeroes.length);
-                  setShowModal(true);
-                }}
+                onClick={() => setShowModal(true)}
                 disabled={selectedHeroes.length !== 6}
                 className={`
                   w-full py-4 rounded-xl text-base font-bold transition-all duration-300
@@ -350,9 +326,7 @@ function TeamBuilderPage() {
                   }
                 `}
               >
-                {selectedHeroes.length === 6
-                  ? '💾 Save Team'
-                  : `🔒 Select ${6 - selectedHeroes.length} More Heroes`}
+                {selectedHeroes.length === 6 ? '💾 Save Team' : `🔒 Select ${6 - selectedHeroes.length} More Heroes`}
               </button>
 
               <button

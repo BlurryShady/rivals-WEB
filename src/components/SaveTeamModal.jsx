@@ -1,13 +1,35 @@
 import { useState } from 'react';
-import { buildMediaUrl } from "../utils/media";
+import { buildMediaUrl } from '../utils/media';
 import { getRoleCounts, findMutualSynergies } from '../utils/teamInsights';
+
+function ImgWithFallback({ src, alt, className, emoji = '🦸' }) {
+  const [failed, setFailed] = useState(false);
+  const finalSrc = src ? buildMediaUrl(src) : null;
+
+  if (!finalSrc || failed) {
+    return (
+      <div className={`${className} flex items-center justify-center`}>
+        <span className="text-3xl">{emoji}</span>
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={finalSrc}
+      alt={alt}
+      className={className}
+      loading="lazy"
+      onError={() => setFailed(true)}
+    />
+  );
+}
 
 function SaveTeamModal({ selectedHeroes = [], onClose, onSave }) {
   const [teamName, setTeamName] = useState('');
   const [description, setDescription] = useState('');
 
   const roleCounts = getRoleCounts(selectedHeroes);
-
   const vanguards = roleCounts.VANGUARD || 0;
   const duelists = roleCounts.DUELIST || 0;
   const strategists = roleCounts.STRATEGIST || 0;
@@ -36,11 +58,8 @@ function SaveTeamModal({ selectedHeroes = [], onClose, onSave }) {
     strengths.push('Has essential roles covered');
   }
 
-  if (duelists === 0) {
-    weaknesses.push('No Duelist - Lacks damage output');
-  } else if (duelists === 1) {
-    weaknesses.push('Only 1 Duelist - Poor damage output');
-  }
+  if (duelists === 0) weaknesses.push('No Duelist - Lacks damage output');
+  else if (duelists === 1) weaknesses.push('Only 1 Duelist - Poor damage output');
 
   const synergies = findMutualSynergies(selectedHeroes);
 
@@ -58,8 +77,29 @@ function SaveTeamModal({ selectedHeroes = [], onClose, onSave }) {
   };
 
   return (
-    <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.95)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', zIndex: 9999 }}>
-      <div className="glass" style={{ maxWidth: '48rem', width: '100%', borderRadius: '1rem', padding: '2rem', maxHeight: '90vh', overflowY: 'auto' }}>
+    <div
+      style={{
+        position: 'fixed',
+        inset: 0,
+        backgroundColor: 'rgba(0,0,0,0.95)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '1rem',
+        zIndex: 9999,
+      }}
+    >
+      <div
+        className="glass"
+        style={{
+          maxWidth: '48rem',
+          width: '100%',
+          borderRadius: '1rem',
+          padding: '2rem',
+          maxHeight: '90vh',
+          overflowY: 'auto',
+        }}
+      >
         <div className="mb-6 text-center">
           <h2 className="text-3xl font-bold gold-text mb-2">Review Your Team</h2>
           <p className="text-sm text-[#9B8B7E]">Check team composition and confirm</p>
@@ -68,48 +108,34 @@ function SaveTeamModal({ selectedHeroes = [], onClose, onSave }) {
         {/* Hero Row */}
         <div className="mb-8">
           <div className="flex justify-center gap-3">
-            {selectedHeroes.map((hero, index) => (
-              <div key={hero.id ?? index} className="relative group">
-                <div className="w-20 h-24 rounded-lg overflow-hidden bg-[#1A1612] border border-[#D4AF37]/30 relative">
-                 {(() => {
-                  const src = buildMediaUrl(hero.image_url ?? hero.image);
-                  return src ? (
-                    <img
+            {selectedHeroes.map((hero, index) => {
+              const src = hero?.image_url ?? hero?.image ?? null;
+
+              return (
+                <div key={hero?.id ?? index} className="relative group">
+                  <div className="w-20 h-24 rounded-lg overflow-hidden bg-[#1A1612] border border-[#D4AF37]/30 relative">
+                    <ImgWithFallback
                       src={src}
-                      alt={hero.name}
+                      alt={hero?.name || 'Hero'}
                       className="w-full h-full object-cover"
-                      loading="lazy"
-                      onError={(e) => {
-                        // prevent infinite loop if fallback also errors (rare)
-                        e.currentTarget.onerror = null;
-
-                        // Replace the broken <img> with an emoji fallback element
-                        const fallback = document.createElement('div');
-                        fallback.className = 'w-full h-full flex items-center justify-center text-3xl';
-                        fallback.textContent = '🦸';
-                        e.currentTarget.replaceWith(fallback);
-                      }}
+                      emoji="🦸"
                     />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-3xl">🦸</div>
-                  );
-                })()}
 
+                    <div className="absolute top-1 left-1 w-6 h-6 rounded-full bg-[#0A0A0A]/80 flex items-center justify-center text-sm">
+                      {getRoleIcon(hero?.role)}
+                    </div>
 
-                  <div className="absolute top-1 left-1 w-6 h-6 rounded-full bg-[#0A0A0A]/80 flex items-center justify-center text-sm">
-                    {getRoleIcon(hero.role)}
+                    <div className="absolute bottom-1 right-1 w-5 h-5 rounded-full bg-[#D4AF37] text-[#0A0A0A] flex items-center justify-center text-xs font-bold">
+                      {index + 1}
+                    </div>
                   </div>
 
-                  <div className="absolute bottom-1 right-1 w-5 h-5 rounded-full bg-[#D4AF37] text-[#0A0A0A] flex items-center justify-center text-xs font-bold">
-                    {index + 1}
+                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-[#0A0A0A] rounded text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition pointer-events-none z-10">
+                    {hero?.name}
                   </div>
                 </div>
-
-                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-[#0A0A0A] rounded text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition pointer-events-none z-10">
-                  {hero.name}
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 
@@ -117,11 +143,15 @@ function SaveTeamModal({ selectedHeroes = [], onClose, onSave }) {
         <div className="glass p-6 rounded-lg mb-6">
           <h3 className="text-lg font-bold gold-text mb-4">Team Analysis</h3>
 
-          <div className={`p-3 rounded-lg mb-4 ${
-            compositionStatus === 'great' ? 'bg-[#D4AF37]/20 border border-[#D4AF37] text-[#D4AF37]' :
-            compositionStatus === 'okay' ? 'bg-[#C19A3F]/20 border border-[#C19A3F] text-[#C19A3F]' :
-            'bg-[#8B7355]/20 border border-[#8B7355] text-[#8B7355]'
-          }`}>
+          <div
+            className={`p-3 rounded-lg mb-4 ${
+              compositionStatus === 'great'
+                ? 'bg-[#D4AF37]/20 border border-[#D4AF37] text-[#D4AF37]'
+                : compositionStatus === 'okay'
+                  ? 'bg-[#C19A3F]/20 border border-[#C19A3F] text-[#C19A3F]'
+                  : 'bg-[#8B7355]/20 border border-[#8B7355] text-[#8B7355]'
+            }`}
+          >
             <p className="text-sm font-medium">{compositionMessage}</p>
           </div>
 
@@ -130,28 +160,30 @@ function SaveTeamModal({ selectedHeroes = [], onClose, onSave }) {
               <div>
                 <p className="font-bold text-[#D4AF37] mb-2">⚡ Synergies:</p>
                 <ul className="space-y-1 text-[#E8E6E3]">
-                  {synergies.slice(0, 3).map((synergy, i) => (
-                    <li key={i}>• {synergy}</li>
+                  {synergies.slice(0, 3).map((s, i) => (
+                    <li key={i}>• {s}</li>
                   ))}
                 </ul>
               </div>
             )}
+
             {strengths.length > 0 && (
               <div>
                 <p className="font-bold text-[#D4AF37] mb-2">✓ Strengths:</p>
                 <ul className="space-y-1 text-[#E8E6E3]">
-                  {strengths.map((strength, i) => (
-                    <li key={i}>• {strength}</li>
+                  {strengths.map((s, i) => (
+                    <li key={i}>• {s}</li>
                   ))}
                 </ul>
               </div>
             )}
+
             {weaknesses.length > 0 && (
               <div>
                 <p className="font-bold text-[#8B7355] mb-2">⚠ Weaknesses:</p>
                 <ul className="space-y-1 text-[#9B8B7E]">
-                  {weaknesses.map((weakness, i) => (
-                    <li key={i}>• {weakness}</li>
+                  {weaknesses.map((w, i) => (
+                    <li key={i}>• {w}</li>
                   ))}
                 </ul>
               </div>
