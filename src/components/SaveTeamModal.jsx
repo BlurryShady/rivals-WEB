@@ -1,19 +1,16 @@
 import { useState } from 'react';
-import { buildMediaUrl } from '../utils/media';
 import { getRoleCounts, findMutualSynergies } from '../utils/teamInsights';
 
 function SaveTeamModal({ selectedHeroes = [], onClose, onSave }) {
   const [teamName, setTeamName] = useState('');
   const [description, setDescription] = useState('');
 
-  // Calculate team stats
   const roleCounts = getRoleCounts(selectedHeroes);
 
   const vanguards = roleCounts.VANGUARD || 0;
   const duelists = roleCounts.DUELIST || 0;
   const strategists = roleCounts.STRATEGIST || 0;
 
-  // Team composition analysis
   let compositionStatus = 'bad';
   let compositionMessage = '';
   const strengths = [];
@@ -38,23 +35,16 @@ function SaveTeamModal({ selectedHeroes = [], onClose, onSave }) {
     strengths.push('Has essential roles covered');
   }
 
-  // Check for damage output issues
   if (duelists === 0) {
     weaknesses.push('No Duelist - Lacks damage output');
   } else if (duelists === 1) {
     weaknesses.push('Only 1 Duelist - Poor damage output');
   }
 
-  // Find synergies (mutual connections between heroes)
   const synergies = findMutualSynergies(selectedHeroes);
 
-  // Role icons (simplified - use emoji or first letter)
   const getRoleIcon = (role) => {
-    const icons = {
-      VANGUARD: '🛡️',
-      DUELIST: '⚔️',
-      STRATEGIST: '✨',
-    };
+    const icons = { VANGUARD: '🛡️', DUELIST: '⚔️', STRATEGIST: '✨' };
     return icons[role] || '❓';
   };
 
@@ -69,42 +59,40 @@ function SaveTeamModal({ selectedHeroes = [], onClose, onSave }) {
   return (
     <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.95)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', zIndex: 9999 }}>
       <div className="glass" style={{ maxWidth: '48rem', width: '100%', borderRadius: '1rem', padding: '2rem', maxHeight: '90vh', overflowY: 'auto' }}>
-        {/* Header */}
         <div className="mb-6 text-center">
           <h2 className="text-3xl font-bold gold-text mb-2">Review Your Team</h2>
-          <p className="text-sm text-[#9B8B7E]">
-            Check team composition and confirm
-          </p>
+          <p className="text-sm text-[#9B8B7E]">Check team composition and confirm</p>
         </div>
 
-        {/* Hero Row with Role Icons (numbered 1-6) */}
+        {/* Hero Row */}
         <div className="mb-8">
           <div className="flex justify-center gap-3">
             {selectedHeroes.map((hero, index) => (
-              <div key={index} className="relative group">
-                {/* Hero portrait with role icon overlay */}
+              <div key={hero.id ?? index} className="relative group">
                 <div className="w-20 h-24 rounded-lg overflow-hidden bg-[#1A1612] border border-[#D4AF37]/30 relative">
-                  {hero.image ? (
+                  {hero.image_url ? (
                     <img
-                      src={buildMediaUrl(hero.image)}
+                      src={hero.image_url}
                       alt={hero.name}
                       className="w-full h-full object-cover"
+                      loading="lazy"
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none';
+                      }}
                     />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center text-3xl">
-                      🦸
-                    </div>
+                    <div className="w-full h-full flex items-center justify-center text-3xl">🦸</div>
                   )}
-                  {/* Role Icon overlay */}
+
                   <div className="absolute top-1 left-1 w-6 h-6 rounded-full bg-[#0A0A0A]/80 flex items-center justify-center text-sm">
                     {getRoleIcon(hero.role)}
                   </div>
-                  {/* Number badge */}
+
                   <div className="absolute bottom-1 right-1 w-5 h-5 rounded-full bg-[#D4AF37] text-[#0A0A0A] flex items-center justify-center text-xs font-bold">
                     {index + 1}
                   </div>
                 </div>
-                {/* Tooltip */}
+
                 <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-[#0A0A0A] rounded text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition pointer-events-none z-10">
                   {hero.name}
                 </div>
@@ -113,11 +101,10 @@ function SaveTeamModal({ selectedHeroes = [], onClose, onSave }) {
           </div>
         </div>
 
-        {/* Team Analysis Section */}
+        {/* Team Analysis */}
         <div className="glass p-6 rounded-lg mb-6">
           <h3 className="text-lg font-bold gold-text mb-4">Team Analysis</h3>
-          
-          {/* Composition Status */}
+
           <div className={`p-3 rounded-lg mb-4 ${
             compositionStatus === 'great' ? 'bg-[#D4AF37]/20 border border-[#D4AF37] text-[#D4AF37]' :
             compositionStatus === 'okay' ? 'bg-[#C19A3F]/20 border border-[#C19A3F] text-[#C19A3F]' :
@@ -126,7 +113,6 @@ function SaveTeamModal({ selectedHeroes = [], onClose, onSave }) {
             <p className="text-sm font-medium">{compositionMessage}</p>
           </div>
 
-          {/* Synergies, Strengths, Weaknesses */}
           <div className="grid grid-cols-1 gap-4 text-sm">
             {synergies.length > 0 && (
               <div>
@@ -161,11 +147,9 @@ function SaveTeamModal({ selectedHeroes = [], onClose, onSave }) {
           </div>
         </div>
 
-        {/* Team Name Input */}
+        {/* Team Name */}
         <div className="mb-4">
-          <label className="block text-sm font-medium text-[#E8E6E3] mb-2">
-            Team Name *
-          </label>
+          <label className="block text-sm font-medium text-[#E8E6E3] mb-2">Team Name *</label>
           <input
             type="text"
             value={teamName}
@@ -175,11 +159,9 @@ function SaveTeamModal({ selectedHeroes = [], onClose, onSave }) {
           />
         </div>
 
-        {/* Description Input */}
+        {/* Description */}
         <div className="mb-6">
-          <label className="block text-sm font-medium text-[#E8E6E3] mb-2">
-            Description (Optional)
-          </label>
+          <label className="block text-sm font-medium text-[#E8E6E3] mb-2">Description (Optional)</label>
           <textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
@@ -189,18 +171,11 @@ function SaveTeamModal({ selectedHeroes = [], onClose, onSave }) {
           />
         </div>
 
-        {/* Accept / Deny Buttons */}
         <div className="flex gap-4">
-          <button
-            onClick={handleAccept}
-            className="flex-1 py-3 rounded-full btn-gold font-medium text-lg gold-shine"
-          >
+          <button onClick={handleAccept} className="flex-1 py-3 rounded-full btn-gold font-medium text-lg gold-shine">
             Accept & Save
           </button>
-          <button
-            onClick={onClose}
-            className="flex-1 py-3 rounded-full bg-[#252119] text-[#9B8B7E] hover:text-[#D4AF37] font-medium text-lg transition"
-          >
+          <button onClick={onClose} className="flex-1 py-3 rounded-full bg-[#252119] text-[#9B8B7E] hover:text-[#D4AF37] font-medium text-lg transition">
             Deny
           </button>
         </div>

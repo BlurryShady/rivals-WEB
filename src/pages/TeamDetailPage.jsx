@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { teamAPI, API_ROOT } from '../api/client';
-import { resolveHeroArtwork, buildMediaUrl } from '../utils/media';
+import { buildMediaUrl } from '../utils/media';
 import {
   sortMembersByPosition,
   getRoleCounts,
@@ -23,17 +23,21 @@ function TeamDetailPage() {
   const [commentSubmitting, setCommentSubmitting] = useState(false);
   const [authMessage, setAuthMessage] = useState('');
   const { user } = useAuth();
+
   const currentUserAvatar = user?.avatar_url ? buildMediaUrl(user.avatar_url) : null;
   const currentUserInitials = (user?.username || '?').slice(0, 2).toUpperCase();
   const commentSocketRef = useRef(null);
 
-  const requireAuth = useCallback((message) => {
-    if (!user) {
-      setAuthMessage(message);
-      return false;
-    }
-    return true;
-  }, [user]);
+  const requireAuth = useCallback(
+    (message) => {
+      if (!user) {
+        setAuthMessage(message);
+        return false;
+      }
+      return true;
+    },
+    [user]
+  );
 
   const upsertComment = useCallback((incoming) => {
     setComments((prev) => {
@@ -46,7 +50,6 @@ function TeamDetailPage() {
       return [incoming, ...prev];
     });
   }, []);
-  
 
   useEffect(() => {
     async function fetchTeam() {
@@ -103,9 +106,7 @@ function TeamDetailPage() {
   }, [slug, upsertComment]);
 
   async function toggleVote() {
-    if (!requireAuth('Please log in to vote on teams.')) {
-      return;
-    }
+    if (!requireAuth('Please log in to vote on teams.')) return;
     try {
       const res = await teamAPI.vote(slug);
       setVoted(res.data.voted);
@@ -116,9 +117,7 @@ function TeamDetailPage() {
   }
 
   async function processCommentSubmission() {
-    if (!requireAuth('Please log in to leave a comment.')) {
-      return;
-    }
+    if (!requireAuth('Please log in to leave a comment.')) return;
     if (!commentText.trim() || commentSubmitting) return;
     try {
       setCommentSubmitting(true);
@@ -159,13 +158,8 @@ function TeamDetailPage() {
         <div className="glass p-12 rounded-3xl max-w-2xl mx-auto">
           <div className="text-6xl mb-6">❌</div>
           <h2 className="text-3xl font-bold gold-text mb-4">Team Not Found</h2>
-          <p className="text-lg text-[#B8AFA3] mb-8">
-            This team doesn't exist or has been removed.
-          </p>
-          <Link 
-            to="/teams" 
-            className="text-[#D4AF37] hover:text-[#C5A028] font-semibold text-lg"
-          >
+          <p className="text-lg text-[#B8AFA3] mb-8">This team doesn't exist or has been removed.</p>
+          <Link to="/teams" className="text-[#D4AF37] hover:text-[#C5A028] font-semibold text-lg">
             ← Back to Teams
           </Link>
         </div>
@@ -174,68 +168,42 @@ function TeamDetailPage() {
   }
 
   const creatorUsername = team.user?.username;
-
   const sortedMembers = sortMembersByPosition(team.members);
   const roleCounts = getRoleCounts(sortedMembers);
   const synergies = findMutualSynergies(sortedMembers);
 
-  // Calculate downsides
   const downsides = [];
   const vanguards = roleCounts.VANGUARD || 0;
   const duelists = roleCounts.DUELIST || 0;
   const strategists = roleCounts.STRATEGIST || 0;
 
-  if (vanguards === 0) {
-    downsides.push('No Vanguard - Team lacks a frontline tank');
-  } else if (vanguards === 1) {
-    downsides.push('Only 1 Vanguard - Consider adding another tank');
-  }
+  if (vanguards === 0) downsides.push('No Vanguard - Team lacks a frontline tank');
+  else if (vanguards === 1) downsides.push('Only 1 Vanguard - Consider adding another tank');
 
-  if (strategists === 0) {
-    downsides.push('No Strategist - Team lacks healing and support');
-  } else if (strategists === 1) {
-    downsides.push('Only 1 Strategist - May struggle with sustained healing');
-  }
+  if (strategists === 0) downsides.push('No Strategist - Team lacks healing and support');
+  else if (strategists === 1) downsides.push('Only 1 Strategist - May struggle with sustained healing');
 
-  if (duelists === 0) {
-    downsides.push('No Duelist - Team lacks damage output');
-  } else if (duelists === 1) {
-    downsides.push('Only 1 Duelist - Poor damage output');
-  } else if (duelists >= 4) {
-    downsides.push('Too many Duelists - May lack survivability');
-  }
+  if (duelists === 0) downsides.push('No Duelist - Team lacks damage output');
+  else if (duelists === 1) downsides.push('Only 1 Duelist - Poor damage output');
+  else if (duelists >= 4) downsides.push('Too many Duelists - May lack survivability');
 
   return (
     <div className="py-8">
-      
-      {/* Back Button */}
-      <Link 
-        to="/teams" 
-        className="inline-flex items-center gap-2 text-[#B8AFA3] hover:text-[#D4AF37] mb-8 group transition-colors duration-200"
-      >
+      <Link to="/teams" className="inline-flex items-center gap-2 text-[#B8AFA3] hover:text-[#D4AF37] mb-8 group transition-colors duration-200">
         <span className="group-hover:-translate-x-1 transition-transform duration-200">←</span>
         Back to Teams
       </Link>
 
-      {/* ═══════════════════════════════════════════════════════
-          TEAM HEADER - Majestic Introduction
-          ═══════════════════════════════════════════════════════ */}
       <div className="glass p-10 rounded-3xl mb-12 gold-shine">
-        <h1 className="text-5xl font-bold gold-text mb-4 text-shadow-gold">
-          {team.name}
-        </h1>
-        <p className="text-xl text-[#B8AFA3] mb-6 leading-relaxed">
-          {team.description || 'No description provided'}
-        </p>
+        <h1 className="text-5xl font-bold gold-text mb-4 text-shadow-gold">{team.name}</h1>
+        <p className="text-xl text-[#B8AFA3] mb-6 leading-relaxed">{team.description || 'No description provided'}</p>
+
         <div className="flex flex-wrap items-center gap-6 text-sm text-[#8B8278]">
           <span className="flex items-center gap-2">
             <img src={creatorIcon} alt="Creator icon" className="w-4 h-4 object-contain" />
             Created by
             {creatorUsername ? (
-              <Link
-                to={`/users/${creatorUsername}`}
-                className="text-[#D4AF37] font-semibold hover:text-[#F8E6A0] transition-colors"
-              >
+              <Link to={`/users/${creatorUsername}`} className="text-[#D4AF37] font-semibold hover:text-[#F8E6A0] transition-colors">
                 {creatorUsername}
               </Link>
             ) : (
@@ -253,59 +221,40 @@ function TeamDetailPage() {
           {team.composition_score > 0 && (
             <span className="ml-auto flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-[#D4AF37]/20 to-[#C5A028]/20 border border-[#D4AF37]/40">
               <span className="text-[#D4AF37]">⭐</span>
-              <span className="text-[#D4AF37] font-bold text-base">
-                Score: {team.composition_score}/100
-              </span>
+              <span className="text-[#D4AF37] font-bold text-base">Score: {team.composition_score}/100</span>
             </span>
           )}
         </div>
       </div>
 
-      {/* ═══════════════════════════════════════════════════════
-          HERO COMPOSITION - Blueprint Display
-          ═══════════════════════════════════════════════════════ */}
       <h2 className="text-3xl font-bold gold-text mb-6">Team Composition</h2>
       <div className="flex justify-center gap-4 mb-12">
-        {sortedMembers
-          .map((member) => {
-            const bannerSrc = resolveHeroArtwork(member.hero);
-            return (
-              <div key={member.id} className="relative group">
-                {/* Position Badge */}
-                <div className="absolute top-1 left-1 z-10 w-6 h-6 rounded-full bg-[#D4AF37] text-[#0A0908] flex items-center justify-center text-xs font-bold">
-                  {member.position}
-                </div>
-                
-                {/* Hero Image */}
-                <div className="w-32 h-40 rounded-lg overflow-hidden border-2 border-[#D4AF37]/30 group-hover:border-[#D4AF37]/70 transition-all">
-                  {bannerSrc ? (
-                    <img
-                      src={bannerSrc}
-                      alt={member.hero.name}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-4xl bg-[#1A1612]">
-                      🦸
-                    </div>
-                  )}
-                </div>
-                
-                {/* Hero Name */}
-                <p className="text-center text-sm font-semibold text-[#F5F3F0] mt-2">
-                  {member.hero.name}
-                </p>
-                <div className="flex items-center justify-center gap-1 mt-1">
-                  <img 
-                    src={`/${member.hero.role.toLowerCase()}-icon.ico`}
-                    alt={member.hero.role}
-                    className="w-4 h-4"
-                  />
-                  <span className="text-xs text-[#B8AFA3]">{member.hero.role}</span>
-                </div>
+        {sortedMembers.map((member) => {
+          const hero = member.hero || {};
+          const bannerSrc = hero.banner_url || hero.image_url || null;
+
+          return (
+            <div key={member.id} className="relative group">
+              <div className="absolute top-1 left-1 z-10 w-6 h-6 rounded-full bg-[#D4AF37] text-[#0A0908] flex items-center justify-center text-xs font-bold">
+                {member.position}
               </div>
-            );
-          })}
+
+              <div className="w-32 h-40 rounded-lg overflow-hidden border-2 border-[#D4AF37]/30 group-hover:border-[#D4AF37]/70 transition-all">
+                {bannerSrc ? (
+                  <img src={bannerSrc} alt={hero.name} className="w-full h-full object-cover" loading="lazy" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-4xl bg-[#1A1612]">🦸</div>
+                )}
+              </div>
+
+              <p className="text-center text-sm font-semibold text-[#F5F3F0] mt-2">{hero.name}</p>
+              <div className="flex items-center justify-center gap-1 mt-1">
+                <img src={`/${hero.role?.toLowerCase?.() || 'vanguard'}-icon.ico`} alt={hero.role} className="w-4 h-4" />
+                <span className="text-xs text-[#B8AFA3]">{hero.role}</span>
+              </div>
+            </div>
+          );
+        })}
       </div>
 
       {/* ═══════════════════════════════════════════════════════
