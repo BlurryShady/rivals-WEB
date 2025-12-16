@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { buildMediaUrl } from "../utils/media";
 import { getRoleCounts, findMutualSynergies } from '../utils/teamInsights';
 
 function SaveTeamModal({ selectedHeroes = [], onClose, onSave }) {
@@ -70,19 +71,30 @@ function SaveTeamModal({ selectedHeroes = [], onClose, onSave }) {
             {selectedHeroes.map((hero, index) => (
               <div key={hero.id ?? index} className="relative group">
                 <div className="w-20 h-24 rounded-lg overflow-hidden bg-[#1A1612] border border-[#D4AF37]/30 relative">
-                  {hero.image_url ? (
+                 {(() => {
+                  const src = buildMediaUrl(hero.image_url ?? hero.image);
+                  return src ? (
                     <img
-                      src={hero.image_url}
+                      src={src}
                       alt={hero.name}
                       className="w-full h-full object-cover"
                       loading="lazy"
                       onError={(e) => {
-                        e.currentTarget.style.display = 'none';
+                        // prevent infinite loop if fallback also errors (rare)
+                        e.currentTarget.onerror = null;
+
+                        // Replace the broken <img> with an emoji fallback element
+                        const fallback = document.createElement('div');
+                        fallback.className = 'w-full h-full flex items-center justify-center text-3xl';
+                        fallback.textContent = '🦸';
+                        e.currentTarget.replaceWith(fallback);
                       }}
                     />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center text-3xl">🦸</div>
-                  )}
+                  );
+                })()}
+
 
                   <div className="absolute top-1 left-1 w-6 h-6 rounded-full bg-[#0A0A0A]/80 flex items-center justify-center text-sm">
                     {getRoleIcon(hero.role)}

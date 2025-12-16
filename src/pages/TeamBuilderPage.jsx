@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import { heroAPI } from '../api/client';
+import { heroAPI, teamAPI } from '../api/client';
 import TeamAnalysis from '../components/TeamAnalysis';
 import SaveTeamModal from '../components/SaveTeamModal';
-import { teamAPI } from '../api/client';
+import { buildMediaUrl } from '../utils/media';
 
 function TeamBuilderPage() {
   const [heroes, setHeroes] = useState([]);
@@ -70,7 +70,9 @@ function TeamBuilderPage() {
       <div className="mb-10">
         <h1
           className="text-5xl font-bold gold-text-shiny font-display mb-3"
-          style={{ textShadow: '0 0 40px rgba(212, 175, 55, 0.7), 0 4px 20px rgba(0, 0, 0, 0.8)' }}
+          style={{
+            textShadow: '0 0 40px rgba(212, 175, 55, 0.7), 0 4px 20px rgba(0, 0, 0, 0.8)',
+          }}
         >
           Team Builder
         </h1>
@@ -111,7 +113,9 @@ function TeamBuilderPage() {
             <div className="space-y-6">
               {filteredHeroes.map((hero) => {
                 const isSelected = selectedHeroes.some((h) => h.id === hero.id);
-                const imageSrc = hero.image_url || null;
+
+                // ✅ Always normalize to a usable URL (handles relative paths)
+                const imageSrc = buildMediaUrl(hero.image_url ?? hero.image ?? hero.banner);
 
                 return (
                   <div
@@ -127,7 +131,7 @@ function TeamBuilderPage() {
                     `}
                   >
                     <div className="flex gap-5 p-5">
-                      <div className="w-28 h-28 flex-shrink-0 rounded-xl overflow-hidden bg-gradient-to-br from-[#1A1612] to-[#252119] border-2 border-[#D4AF37]/20">
+                      <div className="w-28 h-28 flex-shrink-0 rounded-xl overflow-hidden bg-gradient-to-br from-[#1A1612] to-[#252119] border-2 border-[#D4AF37]/20 flex items-center justify-center">
                         {imageSrc ? (
                           <img
                             src={imageSrc}
@@ -135,10 +139,15 @@ function TeamBuilderPage() {
                             className="w-full h-full object-contain"
                             loading="lazy"
                             onError={(e) => {
+                              // If a single image breaks, show placeholder
+                              e.currentTarget.onerror = null;
+                              e.currentTarget.src = '';
                               e.currentTarget.style.display = 'none';
                             }}
                           />
-                        ) : (
+                        ) : null}
+
+                        {!imageSrc && (
                           <div className="w-full h-full flex items-center justify-center text-5xl">🦸</div>
                         )}
                       </div>
@@ -177,7 +186,9 @@ function TeamBuilderPage() {
                                   />
                                 ))}
                               </div>
-                              <span className="text-sm font-bold text-[#D4AF37]">({hero.difficulty}/3)</span>
+                              <span className="text-sm font-bold text-[#D4AF37]">
+                                ({hero.difficulty}/3)
+                              </span>
                             </div>
                           </div>
                         )}
@@ -241,14 +252,22 @@ function TeamBuilderPage() {
           )}
         </div>
 
-        <aside className="w-[420px] flex-shrink-0" style={{ position: 'sticky', top: '1.5rem', alignSelf: 'flex-start' }}>
-          <div className="glass p-8 rounded-3xl border-2 border-[#D4AF37]/20" style={{ maxHeight: 'calc(100vh - 3rem)', overflowY: 'auto' }}>
+        <aside
+          className="w-[420px] flex-shrink-0"
+          style={{ position: 'sticky', top: '1.5rem', alignSelf: 'flex-start' }}
+        >
+          <div
+            className="glass p-8 rounded-3xl border-2 border-[#D4AF37]/20"
+            style={{ maxHeight: 'calc(100vh - 3rem)', overflowY: 'auto' }}
+          >
             <h2 className="text-3xl font-bold gold-text mb-6 font-display">Your Team</h2>
 
             <div className="space-y-3 mb-8">
               {[...Array(6)].map((_, index) => {
                 const hero = selectedHeroes[index];
-                const slotImg = hero?.image_url || null;
+
+                // ✅ Normalize image url for sidebar too
+                const slotImg = hero ? buildMediaUrl(hero.image_url ?? hero.image ?? hero.banner) : null;
 
                 return (
                   <div
@@ -277,7 +296,7 @@ function TeamBuilderPage() {
 
                     {hero ? (
                       <>
-                        <div className="w-14 h-14 rounded-lg bg-[#252119] flex-shrink-0 overflow-hidden border-2 border-[#D4AF37]/30">
+                        <div className="w-14 h-14 rounded-lg bg-[#252119] flex-shrink-0 overflow-hidden border-2 border-[#D4AF37]/30 flex items-center justify-center">
                           {slotImg ? (
                             <img
                               src={slotImg}
@@ -285,6 +304,8 @@ function TeamBuilderPage() {
                               className="w-full h-full object-cover"
                               loading="lazy"
                               onError={(e) => {
+                                e.currentTarget.onerror = null;
+                                e.currentTarget.src = '';
                                 e.currentTarget.style.display = 'none';
                               }}
                             />
@@ -329,7 +350,9 @@ function TeamBuilderPage() {
                   }
                 `}
               >
-                {selectedHeroes.length === 6 ? '💾 Save Team' : `🔒 Select ${6 - selectedHeroes.length} More Heroes`}
+                {selectedHeroes.length === 6
+                  ? '💾 Save Team'
+                  : `🔒 Select ${6 - selectedHeroes.length} More Heroes`}
               </button>
 
               <button
