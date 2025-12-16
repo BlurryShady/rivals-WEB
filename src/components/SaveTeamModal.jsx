@@ -1,103 +1,91 @@
-import { useState } from 'react';
-import { buildMediaUrl } from '../utils/media';
-import { getRoleCounts, findMutualSynergies } from '../utils/teamInsights';
-
-function ImgWithFallback({ src, alt, className, emoji = '🦸' }) {
-  const [failed, setFailed] = useState(false);
-  const finalSrc = src ? buildMediaUrl(src) : null;
-
-  if (!finalSrc || failed) {
-    return (
-      <div className={`${className} flex items-center justify-center`}>
-        <span className="text-3xl">{emoji}</span>
-      </div>
-    );
-  }
-
-  return (
-    <img
-      src={finalSrc}
-      alt={alt}
-      className={className}
-      loading="lazy"
-      onError={() => setFailed(true)}
-    />
-  );
-}
+import { useMemo, useState } from "react";
+import { buildMediaUrl } from "../utils/media";
+import { getRoleCounts, findMutualSynergies } from "../utils/teamInsights";
 
 function SaveTeamModal({ selectedHeroes = [], onClose, onSave }) {
-  const [teamName, setTeamName] = useState('');
-  const [description, setDescription] = useState('');
+  const [teamName, setTeamName] = useState("");
+  const [description, setDescription] = useState("");
+
+  // track broken images by hero id
+  const [broken, setBroken] = useState(() => new Set());
 
   const roleCounts = getRoleCounts(selectedHeroes);
   const vanguards = roleCounts.VANGUARD || 0;
   const duelists = roleCounts.DUELIST || 0;
   const strategists = roleCounts.STRATEGIST || 0;
 
-  let compositionStatus = 'bad';
-  let compositionMessage = '';
+  let compositionStatus = "bad";
+  let compositionMessage = "";
   const strengths = [];
   const weaknesses = [];
 
   if (vanguards === 0) {
-    compositionStatus = 'bad';
-    compositionMessage = 'No Vanguard! Team needs a tank.';
-    weaknesses.push('No frontline protection');
+    compositionStatus = "bad";
+    compositionMessage = "No Vanguard! Team needs a tank.";
+    weaknesses.push("No frontline protection");
   } else if (strategists === 0) {
-    compositionStatus = 'bad';
-    compositionMessage = 'No Strategist! Team needs a healer.';
-    weaknesses.push('No healing or support');
+    compositionStatus = "bad";
+    compositionMessage = "No Strategist! Team needs a healer.";
+    weaknesses.push("No healing or support");
   } else if (vanguards >= 2 && duelists >= 2 && strategists >= 1) {
-    compositionStatus = 'great';
-    compositionMessage = 'Balanced 2-2-2 composition!';
-    strengths.push('Well-balanced team composition');
-    strengths.push('Good mix of offense and defense');
+    compositionStatus = "great";
+    compositionMessage = "Balanced 2-2-2 composition!";
+    strengths.push("Well-balanced team composition");
+    strengths.push("Good mix of offense and defense");
   } else {
-    compositionStatus = 'okay';
-    compositionMessage = 'Workable composition.';
-    strengths.push('Has essential roles covered');
+    compositionStatus = "okay";
+    compositionMessage = "Workable composition.";
+    strengths.push("Has essential roles covered");
   }
 
-  if (duelists === 0) weaknesses.push('No Duelist - Lacks damage output');
-  else if (duelists === 1) weaknesses.push('Only 1 Duelist - Poor damage output');
+  if (duelists === 0) weaknesses.push("No Duelist - Lacks damage output");
+  else if (duelists === 1) weaknesses.push("Only 1 Duelist - Poor damage output");
 
-  const synergies = findMutualSynergies(selectedHeroes);
+  const synergies = useMemo(() => findMutualSynergies(selectedHeroes), [selectedHeroes]);
 
   const getRoleIcon = (role) => {
-    const icons = { VANGUARD: '🛡️', DUELIST: '⚔️', STRATEGIST: '✨' };
-    return icons[role] || '❓';
+    const icons = { VANGUARD: "🛡️", DUELIST: "⚔️", STRATEGIST: "✨" };
+    return icons[role] || "❓";
   };
 
   const handleAccept = () => {
     if (!teamName.trim()) {
-      alert('Please enter a team name');
+      alert("Please enter a team name");
       return;
     }
     onSave({ name: teamName, description });
   };
 
+  const markBroken = (heroKey) => {
+    setBroken((prev) => {
+      const next = new Set(prev);
+      next.add(heroKey);
+      return next;
+    });
+  };
+
   return (
     <div
       style={{
-        position: 'fixed',
+        position: "fixed",
         inset: 0,
-        backgroundColor: 'rgba(0,0,0,0.95)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '1rem',
+        backgroundColor: "rgba(0,0,0,0.95)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: "1rem",
         zIndex: 9999,
       }}
     >
       <div
         className="glass"
         style={{
-          maxWidth: '48rem',
-          width: '100%',
-          borderRadius: '1rem',
-          padding: '2rem',
-          maxHeight: '90vh',
-          overflowY: 'auto',
+          maxWidth: "48rem",
+          width: "100%",
+          borderRadius: "1rem",
+          padding: "2rem",
+          maxHeight: "90vh",
+          overflowY: "auto",
         }}
       >
         <div className="mb-6 text-center">
@@ -109,20 +97,29 @@ function SaveTeamModal({ selectedHeroes = [], onClose, onSave }) {
         <div className="mb-8">
           <div className="flex justify-center gap-3">
             {selectedHeroes.map((hero, index) => {
-              const src = hero?.image_url ?? hero?.image ?? null;
+              const key = hero.id ?? `${hero.name}-${index}`;
+              const src = buildMediaUrl(hero.image_url ?? hero.image);
+              const isBroken = broken.has(key);
 
               return (
-                <div key={hero?.id ?? index} className="relative group">
+                <div key={key} className="relative group">
                   <div className="w-20 h-24 rounded-lg overflow-hidden bg-[#1A1612] border border-[#D4AF37]/30 relative">
-                    <ImgWithFallback
-                      src={src}
-                      alt={hero?.name || 'Hero'}
-                      className="w-full h-full object-cover"
-                      emoji="🦸"
-                    />
+                    {src && !isBroken ? (
+                      <img
+                        src={src}
+                        alt={hero.name}
+                        className="w-full h-full object-cover"
+                        loading="lazy"
+                        onError={() => markBroken(key)}
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-3xl">
+                        🦸
+                      </div>
+                    )}
 
                     <div className="absolute top-1 left-1 w-6 h-6 rounded-full bg-[#0A0A0A]/80 flex items-center justify-center text-sm">
-                      {getRoleIcon(hero?.role)}
+                      {getRoleIcon(hero.role)}
                     </div>
 
                     <div className="absolute bottom-1 right-1 w-5 h-5 rounded-full bg-[#D4AF37] text-[#0A0A0A] flex items-center justify-center text-xs font-bold">
@@ -131,7 +128,7 @@ function SaveTeamModal({ selectedHeroes = [], onClose, onSave }) {
                   </div>
 
                   <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-[#0A0A0A] rounded text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition pointer-events-none z-10">
-                    {hero?.name}
+                    {hero.name}
                   </div>
                 </div>
               );
@@ -145,11 +142,11 @@ function SaveTeamModal({ selectedHeroes = [], onClose, onSave }) {
 
           <div
             className={`p-3 rounded-lg mb-4 ${
-              compositionStatus === 'great'
-                ? 'bg-[#D4AF37]/20 border border-[#D4AF37] text-[#D4AF37]'
-                : compositionStatus === 'okay'
-                  ? 'bg-[#C19A3F]/20 border border-[#C19A3F] text-[#C19A3F]'
-                  : 'bg-[#8B7355]/20 border border-[#8B7355] text-[#8B7355]'
+              compositionStatus === "great"
+                ? "bg-[#D4AF37]/20 border border-[#D4AF37] text-[#D4AF37]"
+                : compositionStatus === "okay"
+                ? "bg-[#C19A3F]/20 border border-[#C19A3F] text-[#C19A3F]"
+                : "bg-[#8B7355]/20 border border-[#8B7355] text-[#8B7355]"
             }`}
           >
             <p className="text-sm font-medium">{compositionMessage}</p>
@@ -160,8 +157,8 @@ function SaveTeamModal({ selectedHeroes = [], onClose, onSave }) {
               <div>
                 <p className="font-bold text-[#D4AF37] mb-2">⚡ Synergies:</p>
                 <ul className="space-y-1 text-[#E8E6E3]">
-                  {synergies.slice(0, 3).map((s, i) => (
-                    <li key={i}>• {s}</li>
+                  {synergies.slice(0, 3).map((synergy, i) => (
+                    <li key={i}>• {synergy}</li>
                   ))}
                 </ul>
               </div>
@@ -193,7 +190,9 @@ function SaveTeamModal({ selectedHeroes = [], onClose, onSave }) {
 
         {/* Team Name */}
         <div className="mb-4">
-          <label className="block text-sm font-medium text-[#E8E6E3] mb-2">Team Name *</label>
+          <label className="block text-sm font-medium text-[#E8E6E3] mb-2">
+            Team Name *
+          </label>
           <input
             type="text"
             value={teamName}
@@ -205,7 +204,9 @@ function SaveTeamModal({ selectedHeroes = [], onClose, onSave }) {
 
         {/* Description */}
         <div className="mb-6">
-          <label className="block text-sm font-medium text-[#E8E6E3] mb-2">Description (Optional)</label>
+          <label className="block text-sm font-medium text-[#E8E6E3] mb-2">
+            Description (Optional)
+          </label>
           <textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
@@ -216,10 +217,16 @@ function SaveTeamModal({ selectedHeroes = [], onClose, onSave }) {
         </div>
 
         <div className="flex gap-4">
-          <button onClick={handleAccept} className="flex-1 py-3 rounded-full btn-gold font-medium text-lg gold-shine">
+          <button
+            onClick={handleAccept}
+            className="flex-1 py-3 rounded-full btn-gold font-medium text-lg gold-shine"
+          >
             Accept & Save
           </button>
-          <button onClick={onClose} className="flex-1 py-3 rounded-full bg-[#252119] text-[#9B8B7E] hover:text-[#D4AF37] font-medium text-lg transition">
+          <button
+            onClick={onClose}
+            className="flex-1 py-3 rounded-full bg-[#252119] text-[#9B8B7E] hover:text-[#D4AF37] font-medium text-lg transition"
+          >
             Deny
           </button>
         </div>
