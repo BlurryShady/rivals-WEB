@@ -1,7 +1,7 @@
 import { API_ROOT } from '../api/client';
 
 const normalizeCloudinaryUrl = (url) => {
-  // converts .../upload/v123/... -> .../upload/...
+  // versioning in Cloudinary URLs was a nono so I changed all URLs to remove it
   if (!url.includes('res.cloudinary.com')) return url;
   return url.replace(/\/image\/upload\/v\d+\//, '/image/upload/');
 };
