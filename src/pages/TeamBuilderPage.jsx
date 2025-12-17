@@ -123,9 +123,6 @@ function TeamBuilderPage() {
                     <div className="flex gap-5 p-5">
                       <div className="w-28 h-28 flex-shrink-0 rounded-xl overflow-hidden bg-gradient-to-br from-[#1A1612] to-[#252119] border-2 border-[#D4AF37]/20 relative">
                         {/* fallback behind */}
-                        <div className="absolute inset-0 flex items-center justify-center text-5xl">
-                          🦸
-                        </div>
 
                         {imageSrc ? (
                           <img
@@ -275,9 +272,6 @@ function TeamBuilderPage() {
                     {hero ? (
                       <>
                         <div className="w-14 h-14 rounded-lg bg-[#252119] flex-shrink-0 overflow-hidden border-2 border-[#D4AF37]/30 relative">
-                          <div className="absolute inset-0 flex items-center justify-center text-2xl">
-                            🦸
-                          </div>
                           {slotImg ? (
                             <img
                               src={slotImg}
