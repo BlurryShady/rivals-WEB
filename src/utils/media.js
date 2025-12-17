@@ -1,17 +1,22 @@
-// src/utils/media.js
-import { API_ROOT } from "../api/client";
+import { API_ROOT } from '../api/client';
 
-// Accepts: null, relative 
-export function buildMediaUrl(path) {
+const normalizeCloudinaryUrl = (url) => {
+  // versioning in Cloudinary URLs was a nono so I changed all URLs to remove it
+  if (!url.includes('res.cloudinary.com')) return url;
+  return url.replace(/\/image\/upload\/v\d+\//, '/image/upload/');
+};
+
+export const buildMediaUrl = (path) => {
   if (!path) return null;
 
-  // already absolute (Cloudinary, S3, etc.)
-  if (/^https?:\/\//i.test(path)) return path;
+  if (path.startsWith('http')) {
+    return normalizeCloudinaryUrl(path);
+  }
 
-  // normalize
-  const clean = String(path).replace(/^\//, "");
+  return `${API_ROOT}${path}`;
+};
 
-  // if backend returns "media/..." or you stored "heroes/..." etc.
-  // choose your preferred base:
-  return `${API_ROOT}/${clean}`;
-}
+export const resolveHeroArtwork = (hero) => {
+  if (!hero) return null;
+  return buildMediaUrl(hero.banner) || buildMediaUrl(hero.image);
+};
