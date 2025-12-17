@@ -1,6 +1,6 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { teamAPI, API_ROOT } from '../api/client';
+import { teamAPI } from '../api/client';
 import { buildMediaUrl } from '../utils/media';
 import {
   sortMembersByPosition,
@@ -26,7 +26,6 @@ function TeamDetailPage() {
 
   const currentUserAvatar = user?.avatar_url ? buildMediaUrl(user.avatar_url) : null;
   const currentUserInitials = (user?.username || '?').slice(0, 2).toUpperCase();
-  const commentSocketRef = useRef(null);
 
   const requireAuth = useCallback(
     (message) => {
@@ -39,15 +38,23 @@ function TeamDetailPage() {
     [user]
   );
 
+  useEffect(() => {
+    if (user) setAuthMessage('');
+  }, [user]);
+
   const upsertComment = useCallback((incoming) => {
     setComments((prev) => {
+      if (!incoming?.id) return prev;
+
       const idx = prev.findIndex((existing) => existing.id === incoming.id);
       if (idx !== -1) {
         const updated = [...prev];
         updated[idx] = incoming;
         return updated;
       }
-      return [incoming, ...prev];
+
+      // append instead of prepend (oldest → newest ordering)
+      return [...prev, incoming];
     });
   }, []);
 
@@ -71,39 +78,21 @@ function TeamDetailPage() {
     async function fetchComments() {
       try {
         const res = await teamAPI.getComments(slug);
-        setComments(res.data);
+
+        // Ensure oldest → newest
+        const sorted = [...res.data].sort(
+          (a, b) => new Date(a.created_at) - new Date(b.created_at)
+        );
+
+        setComments(sorted);
       } catch (e) {
         console.error('Error loading comments:', e);
       }
     }
+
     fetchComments();
   }, [slug]);
 
-  useEffect(() => {
-    const protocol = API_ROOT.startsWith('https') ? 'wss' : 'ws';
-    const host = API_ROOT.replace(/^https?:\/\//, '').replace(/\/$/, '');
-    const wsUrl = `${protocol}://${host}/ws/teams/${slug}/comments/`;
-    const socket = new WebSocket(wsUrl);
-    commentSocketRef.current = socket;
-
-    socket.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        upsertComment(data);
-      } catch (err) {
-        console.error('Failed to parse comment payload:', err);
-      }
-    };
-
-    socket.onerror = (err) => {
-      console.error('Comment websocket error:', err);
-    };
-
-    return () => {
-      socket.close();
-      commentSocketRef.current = null;
-    };
-  }, [slug, upsertComment]);
 
   async function toggleVote() {
     if (!requireAuth('Please log in to vote on teams.')) return;
@@ -119,6 +108,7 @@ function TeamDetailPage() {
   async function processCommentSubmission() {
     if (!requireAuth('Please log in to leave a comment.')) return;
     if (!commentText.trim() || commentSubmitting) return;
+
     try {
       setCommentSubmitting(true);
       const res = await teamAPI.addComment(slug, commentText.trim());
@@ -257,12 +247,7 @@ function TeamDetailPage() {
         })}
       </div>
 
-      {/* ═══════════════════════════════════════════════════════
-          TEAM ANALYSIS - Strategy Breakdown
-          ═══════════════════════════════════════════════════════ */}
       <div className="glass p-10 rounded-3xl mb-12 space-y-10">
-        
-        {/* Role Distribution */}
         <div>
           <h3 className="text-2xl font-bold gold-text mb-4 flex items-center gap-3">
             <span></span>
@@ -284,7 +269,6 @@ function TeamDetailPage() {
           </div>
         </div>
 
-        {/* Synergies */}
         <div>
           <h3 className="text-2xl font-bold gold-text mb-4 flex items-center gap-3">
             <span>⚡</span>
@@ -293,8 +277,8 @@ function TeamDetailPage() {
           {synergies.length > 0 ? (
             <ul className="space-y-3">
               {synergies.map((synergy, idx) => (
-                <li 
-                  key={idx} 
+                <li
+                  key={idx}
                   className="flex items-center gap-3 text-lg text-[#B8AFA3] p-3 rounded-lg bg-[#1A1612]/40 border border-[#D4AF37]/10"
                 >
                   <span className="text-2xl">✨</span>
@@ -309,7 +293,6 @@ function TeamDetailPage() {
           )}
         </div>
 
-        {/* Downsides */}
         <div>
           <h3 className="text-2xl font-bold gold-text mb-4 flex items-center gap-3">
             <span>⚠️</span>
@@ -318,8 +301,8 @@ function TeamDetailPage() {
           {downsides.length > 0 ? (
             <ul className="space-y-3">
               {downsides.map((downside, idx) => (
-                <li 
-                  key={idx} 
+                <li
+                  key={idx}
                   className="flex items-center gap-3 text-lg text-[#B8AFA3] p-3 rounded-lg bg-[#8B7355]/10 border border-[#8B7355]/30"
                 >
                   <span className="text-2xl text-[#C19A3F]">⚠</span>
@@ -337,32 +320,28 @@ function TeamDetailPage() {
           )}
         </div>
 
-        {/* Voting Section */}
         <div className="pt-6 border-t-2 border-[#D4AF37]/20">
           <div className="flex items-center gap-6">
             <button
               onClick={toggleVote}
               className={`inline-flex items-center gap-3 px-8 py-4 rounded-full text-lg font-bold transition-all duration-300 border-2 shadow-lg ${
-                voted 
-                  ? 'bg-gradient-to-r from-[#D4AF37] to-[#C5A028] border-[#D4AF37] text-[#0A0908] shadow-[0_0_30px_rgba(212,175,55,0.5)]' 
+                voted
+                  ? 'bg-gradient-to-r from-[#D4AF37] to-[#C5A028] border-[#D4AF37] text-[#0A0908] shadow-[0_0_30px_rgba(212,175,55,0.5)]'
                   : 'bg-[#1A1612] border-[#D4AF37]/30 text-[#D4AF37] hover:border-[#D4AF37] hover:shadow-[0_0_20px_rgba(212,175,55,0.3)]'
               }`}
               aria-label={voted ? 'Remove upvote' : 'Upvote'}
             >
-              <svg 
-                xmlns="http://www.w3.org/2000/svg" 
-                viewBox="0 0 24 24" 
-                fill="currentColor" 
-                className="w-6 h-6"
-              >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6">
                 <path d="M12 4l7 8h-5v8H10v-8H5l7-8z" />
               </svg>
               <span>{voted ? 'Upvoted' : 'Upvote'}</span>
-              <span className={`px-3 py-1 rounded-full text-base font-bold ${
-                voted 
-                  ? 'bg-[#0A0908]/30 text-[#0A0908]' 
-                  : 'bg-[#0F0D0A] border border-[#D4AF37]/20 text-[#D4AF37]'
-              }`}>
+              <span
+                className={`px-3 py-1 rounded-full text-base font-bold ${
+                  voted
+                    ? 'bg-[#0A0908]/30 text-[#0A0908]'
+                    : 'bg-[#0F0D0A] border border-[#D4AF37]/20 text-[#D4AF37]'
+                }`}
+              >
                 {upvotes}
               </span>
             </button>
@@ -371,37 +350,33 @@ function TeamDetailPage() {
             </span>
           </div>
 
-        {!user && (
-          <div className="mt-4 text-sm text-[#D4AF37]">
-            Please <Link className="underline" to="/login">log in</Link> to vote or comment.
-          </div>
-        )}
-        {authMessage && (
-          <div className="mt-4 text-sm text-[#C97A7A]">
-            {authMessage}
-          </div>
-        )}
+          {!user && (
+            <div className="mt-4 text-sm text-[#D4AF37]">
+              Please <Link className="underline" to="/login">log in</Link> to vote or comment.
+            </div>
+          )}
+          {authMessage && (
+            <div className="mt-4 text-sm text-[#C97A7A]">
+              {authMessage}
+            </div>
+          )}
         </div>
-
       </div>
 
-      {/* ═══════════════════════════════════════════════════════
-          COMMENTS SECTION
-          ═══════════════════════════════════════════════════════ */}
       <div className="glass p-10 rounded-3xl mb-12">
         <h3 className="text-3xl font-bold gold-text mb-8 flex items-center gap-3">
           <span>💬</span>
           Comments
         </h3>
-        
+
         {comments.length > 0 ? (
           <div className="space-y-4 mb-8">
             {comments.map((c) => {
               const avatar = buildMediaUrl(c.user?.avatar_url);
               const initials = (c.user?.username || '?').slice(0, 2).toUpperCase();
               return (
-                <div 
-                  key={c.id} 
+                <div
+                  key={c.id}
                   className="p-5 rounded-xl bg-[#1A1612]/60 border border-[#D4AF37]/10 hover:border-[#D4AF37]/20 transition-colors duration-200"
                 >
                   <div className="flex items-start gap-4">
@@ -434,7 +409,6 @@ function TeamDetailPage() {
           </p>
         )}
 
-        {/* Comment Form */}
         <form
           onSubmit={submitComment}
           className="flex items-start gap-4 p-5 rounded-2xl bg-[#0F0D0A]/60 border border-[#D4AF37]/10"
@@ -446,6 +420,7 @@ function TeamDetailPage() {
               currentUserInitials
             )}
           </div>
+
           <div className="flex-1 space-y-3">
             <textarea
               value={commentText}
@@ -472,6 +447,7 @@ function TeamDetailPage() {
             </div>
           </div>
         </form>
+
         {!user && (
           <div className="mt-4 text-sm text-[#D4AF37]">
             Have thoughts to share? <Link className="underline" to="/login">Log in</Link> to join the discussion.
@@ -479,9 +455,6 @@ function TeamDetailPage() {
         )}
       </div>
 
-      {/* ═══════════════════════════════════════════════════════
-          CTA - Create Your Own
-          ═══════════════════════════════════════════════════════ */}
       <div className="text-center">
         <Link
           to="/team-builder"
@@ -492,7 +465,6 @@ function TeamDetailPage() {
           <span>→</span>
         </Link>
       </div>
-
     </div>
   );
 }
