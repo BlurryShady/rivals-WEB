@@ -1,7 +1,11 @@
 import axios from 'axios';
 
 // Base URL for Django API
-export const API_ROOT = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
+const PROD_API = "https://api.rivals.blurryshady.dev";
+const API_ROOT =
+  import.meta.env.VITE_API_BASE_URL ||
+  (import.meta.env.PROD ? PROD_API : "http://127.0.0.1:8000");
+
 const API_BASE_URL = `${API_ROOT}/api`;
 
 // Create axios instance
