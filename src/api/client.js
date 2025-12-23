@@ -18,6 +18,8 @@ const apiClient = axios.create({
 console.log("VITE_API_BASE_URL =", import.meta.env.VITE_API_BASE_URL);
 console.log("API_ROOT =", API_ROOT);
 console.log("API_BASE_URL =", API_BASE_URL);
+console.log("FRONTEND BUILD =", "HEROKU API SWITCH 2025-12-22");
+
 
 
 // Add auth token to requests (if user is logged in)
